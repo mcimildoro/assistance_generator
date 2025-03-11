@@ -2,60 +2,85 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/superbaseClient"; // Asegúrate de importar correctamente el cliente de Supabase
 
 interface Attendee {
+  id: string;
   name: string;
   timestamp: string;
 }
 
 export default function AdminPage() {
   const [attendees, setAttendees] = useState<Attendee[]>([]);
-  //const [eventTitle, setEventTitle] = useState("Evento de Fútbol");
   const router = useRouter();
 
-  // ✅ Cargar asistentes desde localStorage al montar la página
+  // ✅ Obtener la lista de asistentes desde Supabase
   useEffect(() => {
-    const storedAttendees = localStorage.getItem("attendees");
-    if (storedAttendees) {
-      setAttendees(JSON.parse(storedAttendees));
+    async function fetchAttendees() {
+      const { data, error } = await supabase.from("attendees").select("*");
+      if (error) {
+        console.error("❌ Error obteniendo asistentes:", error.message);
+      } else {
+        setAttendees(data);
+      }
     }
+
+    fetchAttendees();
   }, []);
 
-  // ✅ Cambiar título del evento
-  {/*const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEventTitle(e.target.value);
-  };*/}
+  // ✅ Eliminar un asistente de la base de datos
+  const removeAttendee = async (id: string) => {
+    const { error } = await supabase.from("attendees").delete().match({ id });
 
-  // ✅ Eliminar un asistente individualmente
-  const removeAttendee = (index: number) => {
-    const updatedAttendees = attendees.filter((_, i) => i !== index);
-    setAttendees(updatedAttendees);
-    localStorage.setItem("attendees", JSON.stringify(updatedAttendees));
+    if (error) {
+      console.error("❌ Error eliminando asistente:", error.message);
+    } else {
+      setAttendees((prev) => prev.filter((attendee) => attendee.id !== id));
+    }
   };
 
-  // ✅ Reiniciar toda la lista de asistentes
-  const resetAttendees = () => {
-    setAttendees([]);
-    localStorage.removeItem("attendees"); // ✅ Borra los asistentes guardados
+  // ✅ Reiniciar el evento: Borra todos los asistentes y resetea `localStorage`
+  const resetAttendees = async () => {
+    console.log("🔄 Intentando reiniciar evento...");
+  
+    try {
+      // 🔍 Obtener asistentes antes de eliminar (para verificar)
+      const { data: existingData, error: fetchError } = await supabase.from("attendees").select("*");
+      console.log("📋 Asistentes antes de eliminar:", existingData);
+  
+      if (fetchError) throw new Error("🔴 Error obteniendo datos: " + fetchError.message);
+  
+      // 🗑️ Elimina TODOS los registros correctamente
+      const { error } = await supabase.from("attendees").delete().gt("timestamp", "0001-01-01");
+  
+      if (error) throw new Error("🔴 Error al eliminar asistentes: " + error.message);
+  
+      console.log("✅ Todos los asistentes han sido eliminados correctamente");
+  
+      // 🔄 Limpiar `localStorage` y reiniciar `hasAttended`
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("attendees");
+        localStorage.removeItem("hasAttended"); // 🔥 Esto permite volver a registrarse
+        console.log("✅ LocalStorage limpiado correctamente");
+      }
+  
+      // 🔄 Refrescar estado en el frontend
+      setAttendees([]); // Vacía la lista de asistentes
+  
+      // 🚀 Opcional: Recargar la página para reflejar los cambios
+      window.location.reload();
+  
+    } catch (error) {
+      console.error("❌ Error al reiniciar evento:", error instanceof Error ? error.message : "Unknown error");
+    }
   };
+  
+  
+  
 
   return (
     <main className="flex min-h-screen flex-col items-center p-14">
-
-
-      {/* Cambiar título del evento 
-      <div className="mb-6 w-full max-w-md">
-        <label className="block text-lg font-semibold mb-2">Título del Evento:</label>
-        <input
-          type="text"
-          value={eventTitle}
-          onChange={handleTitleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-        />
-      </div>
-      
-      */}
-      
+      <h1 className="text-4xl font-bold mb-6">Administrar Evento</h1>
 
       {/* Tabla de asistentes */}
       <div className="w-full max-w-md">
@@ -76,8 +101,8 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {attendees.map((attendee, index) => (
-                <tr key={index}>
+              {attendees.map((attendee) => (
+                <tr key={attendee.id}>
                   <td className="py-2 px-4 border-b border-gray-200">{attendee.name}</td>
                   <td className="py-2 px-4 border-b border-gray-200">
                     {new Date(attendee.timestamp).toLocaleTimeString("es-ES", {
@@ -89,7 +114,7 @@ export default function AdminPage() {
                   </td>
                   <td className="py-2 px-4 border-b border-gray-200">
                     <button
-                      onClick={() => removeAttendee(index)}
+                      onClick={() => removeAttendee(attendee.id)}
                       className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
                     >
                       Eliminar

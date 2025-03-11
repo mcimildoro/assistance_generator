@@ -1,3 +1,7 @@
+import React from "react"
+import { useEffect } from "react"
+import { supabase } from "@/lib/superbaseClient"
+
 interface Attendee {
     name: string
     timestamp: string
@@ -7,7 +11,26 @@ interface Attendee {
     attendees: Attendee[]
   }
   
+
+
+  
   export default function AttendeesList({ attendees }: AttendeesListProps) {
+    
+
+    useEffect(() => {
+      async function fetchAttendees() {
+        const { data, error } = await supabase.from("attendees").select("*");
+  
+        if (error) {
+          console.error("❌ Error al obtener los asistentes:", error.message);
+        } else {
+          console.log("✅ Asistentes obtenidos:", data);
+        }
+      }
+  
+      fetchAttendees();
+    }, []);
+
     return (
       <div className="mt-8 w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4">Lista de Asistentes</h2>
