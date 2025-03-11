@@ -47,20 +47,24 @@ interface Attendee {
               </tr>
             </thead>
             <tbody>
-              {attendees.map((attendee, index) => (
-                <tr key={index}>
-                  <td className="py-2 px-4 border-b border-gray-200">{attendee.name}</td>
-                  <td className="py-2 px-4 border-b border-gray-200">
-                    {new Date(attendee.timestamp).toLocaleString("es-ES", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                      hour12: true,
-                    })} 
-                  </td>
-                </tr>
-              ))}
+              {attendees
+                .slice() // Clonamos el array para no modificar el estado original
+                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Ordenamos por timestamp
+                .map((attendee, index) => (
+                  <tr key={index}>
+                    <td className="py-2 px-4 border-b border-gray-200">{attendee.name}</td>
+                    <td className="py-2 px-4 border-b border-gray-200">
+                      {new Date(attendee.timestamp).toLocaleString("es-ES", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      })}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
+
           </table>
         ) : (
           <p>Aún no hay asistentes registrados.</p>
