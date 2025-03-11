@@ -7,10 +7,10 @@ interface Attendee {
     timestamp: string
   }
   
-  interface AttendeesListProps {
-    attendees: Attendee[]
-  }
-  
+interface AttendeesListProps {
+  attendees: Attendee[]
+}
+
 
 
   
@@ -29,7 +29,25 @@ interface Attendee {
       }
   
       fetchAttendees();
-    }, []);
+   // Suscripción en tiempo real a los cambios en la tabla "attendees"
+   const subscription = supabase
+   .channel("realtime-attendees")
+   .on(
+     "postgres_changes",
+     { event: "INSERT", schema: "public", table: "attendees" },
+     (payload) => {
+       console.log("📢 Nuevo asistente registrado:", payload.new);
+       setAttendees((prev) => [...prev, payload.new]);
+     }
+   )
+   .subscribe();
+
+ // Cleanup de la suscripción cuando el componente se desmonta
+ return () => {
+   supabase.removeChannel(subscription);
+ };
+}, []);
+
 
     return (
       <div className="mt-8 w-full max-w-md">
