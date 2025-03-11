@@ -14,6 +14,8 @@ export default function AdminPage() {
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const router = useRouter();
 
+
+
   // ✅ Obtener la lista de asistentes desde Supabase
   useEffect(() => {
     async function fetchAttendees() {
@@ -28,6 +30,9 @@ export default function AdminPage() {
     fetchAttendees();
   }, []);
 
+
+
+
   // ✅ Eliminar un asistente de la base de datos
   const removeAttendee = async (id: string) => {
     const { error } = await supabase.from("attendees").delete().match({ id });
@@ -38,6 +43,10 @@ export default function AdminPage() {
       setAttendees((prev) => prev.filter((attendee) => attendee.id !== id));
     }
   };
+
+
+
+
 
   // ✅ Reiniciar el evento: Borra todos los asistentes y resetea `localStorage`
   const resetAttendees = async () => {
@@ -74,6 +83,39 @@ export default function AdminPage() {
       console.error("❌ Error al reiniciar evento:", error instanceof Error ? error.message : "Unknown error");
     }
   };
+
+  const resetEvent = async () => {
+    console.log("🔄 Reiniciando evento...");
+  
+    try {
+      // 🗑️ Eliminar TODOS los asistentes de la base de datos
+      const { error: deleteError } = await supabase.from("attendees").delete().neq("id", "");
+  
+      if (deleteError) {
+        throw deleteError;
+      }
+  
+      console.log("✅ Todos los asistentes eliminados correctamente.");
+  
+      // 🔄 Actualizar estado global en la tabla event_status
+      const { error: updateError } = await supabase
+        .from("event_status")
+        .update({ event_reset: true, updated_at: new Date().toISOString() })
+        .eq("id", "global_event_status"); // ID único para evitar múltiples filas
+  
+      if (updateError) {
+        throw updateError;
+      }
+  
+      console.log("🚀 Estado global de reinicio actualizado en Supabase.");
+  
+    } catch (error) {
+      console.error("❌ Error al reiniciar evento:", error);
+    }
+  };
+  
+
+
   
   
   
@@ -119,6 +161,13 @@ export default function AdminPage() {
                     >
                       Eliminar
                     </button>
+                    <button
+                        onClick={resetEvent}
+                        className="mt-6 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                      >
+                        Reiniciar Asistentes
+                      </button>
+
                   </td>
                 </tr>
               ))}
